@@ -1,0 +1,39 @@
+- hosts: localhost
+  tasks:
+    - name: disable selinux1
+      shell: setenforce 0
+    - name: disable selinux2
+      selinux:
+        state: disabled
+    - name: set runlevel
+      shell: systemctl set-default multi-user.target
+    - name: install pkgs
+      yum:
+        name: "{{ pkgs }}"
+      vars:
+        pkgs:
+          - vim
+          - wget
+          - tcpdump
+          - ntp
+          - net-tools
+          - iptables-services
+    - name: disable service on boot
+      systemd:
+        name: "{{ item }}"
+        enabled: no
+      with_items: "{{ svcs }}"
+      vars:
+        svcs:
+          - chronyd
+          - NetworkManager 
+          - firewalld
+          - iptables
+    - name: enable service on boot
+      systemd:
+        name: "{{ item }}"
+        enabled: yes
+      with_items: "{{ svcs }}"
+      vars:
+        svcs:
+          - ntpd
