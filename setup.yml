@@ -2,6 +2,7 @@
   tasks:
     - name: disable selinux1
       shell: setenforce 0
+      ignore_errors: yes
     - name: disable selinux2
       selinux:
         state: disabled
@@ -18,17 +19,17 @@
           - ntp
           - net-tools
           - iptables-services
-    - name: disable service on boot
+    - name: get services to disable on boot
+      shell: |
+       systemctl list-unit-files | egrep "(firewalld|NetworkManager|chronyd|iptables)\.service" | awk '{print $1}'
+      register: svc_list
+      check_mode: no 
+      changed_when: false
+    - name: disable services on boot
       systemd:
         name: "{{ item }}"
         enabled: no
-      with_items: "{{ svcs }}"
-      vars:
-        svcs:
-          - chronyd
-          - NetworkManager 
-          - firewalld
-          - iptables
+      with_items: "{{ svc_list.stdout_lines }}"
     - name: enable service on boot
       systemd:
         name: "{{ item }}"
@@ -37,3 +38,8 @@
       vars:
         svcs:
           - ntpd
+    - name: notice reboot
+      debug:
+        msg: reboot after 5 seconads
+    - name: reboot
+      shell: sleep 5 && reboot
